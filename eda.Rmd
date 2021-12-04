@@ -26,6 +26,23 @@ forward.mod <- lm(log(sale_price)~ overall_qual+log(gr_liv_area)+ms_sub_class+bs
 ols_press(forward.mod)
 ols_coll_diag(forward.mod)
 ols_regress(forward.mod)
+forward <- ols_step_forward_p(house_fit, penter = 0.01, details = TRUE)
+f2 <- lm(log(sale_price)~+ overall_qual + log(gr_liv_area) + bsmt_qual + total_bsmt_sf + bsmt_unf_sf + overall_cond + bldg_type + kitchen_qual + year_built + lot_area + sale_condition + garage_cars + pool_area + bedroom_abv_gr + mas_vnr_area + land_slope + condition1 + bsmt_fin_sf2 + lot_config, data = houses2)
+ols_press(f2)
+ols_coll_diag(f2)
+ols_regress(f2)
+
+test <- read_csv(file.choose())
+test <- test %>% mutate_at(vars(Alley, BsmtQual, BsmtCond, BsmtExposure, BsmtFinType1, BsmtFinType2, FireplaceQu, GarageType, GarageFinish, GarageQual, GarageCond, PoolQC, Fence, MiscFeature), ~replace_na(.,"None"))
+head(test)
+test2 <- test %>% janitor::clean_names()
+
+pred <- predict.lm(f2, newdata = test2, type = 'response')
+is.numeric(pred)
+pred <- as.data.frame(pred)
+mean_pred <- pred %>% filter(!is.na(pred))
+mean(mean_pred$pred)
+pred <- pred %>% replace_na(., 12.00939)
 
 ```
 
