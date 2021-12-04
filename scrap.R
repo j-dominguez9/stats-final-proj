@@ -1,0 +1,79 @@
+houses <- read_csv(file.choose())
+?read_csv()
+houses %>% mutate()
+head(houses)
+is.na(houses)
+library(tidyverse)
+for (i in 1:nrow(houses)) {
+  is.na(houses[i, ])
+}
+output <- vector("double", ncol(houses))
+for (i in seq_along(houses)) {
+  output[[i]] <- count(houses[[i]])
+}
+output
+houses[[1]]
+head(houses)
+head(houses[2])
+!is.na(houses[[1]])
+names(houses)
+results <- vector("list", length(houses))
+names(results) <- names(houses)
+for(i in seq_along(houses)) {
+  name <- names(houses)[[i]]
+  value <- houses[[i]]
+}
+name
+value
+colnames(houses)[apply(houses, 2, anyNA)]
+houses %>% dplyr::mutate(if_any(.cols = c("Alley", "BsmtQual", "BsmtCond", 'BsmtExposure', 'BsmtFinType1', 'BsmtFinType2', 'FireplaceQu', 'GarageType', 'GarageFinish', 'GarageQual', 'GarageCond', 'PoolQC', 'Fence', 'MiscFeature'), replace_na()))
+
+houses <- houses %>% mutate_at(vars(Alley, BsmtQual, BsmtCond, BsmtExposure, BsmtFinType1, BsmtFinType2, FireplaceQu, GarageType, GarageFinish, GarageQual, GarageCond, PoolQC, Fence, MiscFeature), ~replace_na(.,"None"))
+?replace_na()
+houses %>% replace_na()
+
+houses <- houses %>% janitor::clean_names()
+head(houses)
+fit <- lm(log(sale_price)~overall_qual + log(gr_liv_area) + garage_cars + total_bsmt_sf + bsmt_fin_sf1 + year_built + year_remod_add + kitchen_qual + lot_area + garage_area, data = houses)
+?lm()
+summary(fit)
+
+colnames(houses)
+
+library(leaps)
+leaps::regsubsets(sale_price~., nbest = 3, data = houses)
+?regsubsets()
+library(olsrr)
+ols_step_forward_p()
+lm(sale_price ~ ., data = houses)
+head(houses$sale_price)
+is.numeric(houses$sale_price)
+lapply(houses$sale_price, unique)
+sum(is.na(houses$sale_price))
+attributes(houses)
+str(houses)
+summary(houses)
+houses2 <- houses %>% select(everything(), -c(id, pool_qc, fence, misc_feature, alley, utilities))
+house_fit <- lm(sale_price~.-exterior1st -bsmt_fin_sf1 -low_qual_fin_sf, data = houses2)
+forward <- ols_step_forward_p(house_fit, penter = 0.05, details = TRUE)
+forward
+ols_press(forward.mod)
+forward.mod <- lm(log(sale_price)~ overall_qual+log(gr_liv_area)+ms_sub_class+bsmt_exposure+kitchen_qual+overall_cond+year_built+lot_area+sale_condition+total_bsmt_sf+pool_area+garage_cars+bldg_type+functional+bedroom_abv_gr+condition1+mas_vnr_area+land_slope+land_contour+lot_config+street+year_remod_add+kitchen_abv_gr, data = houses2)
+prac <- lm(sale_price~overall_qual, data = houses2)
+c(overall_qual, gr_liv_area, neighborhood, bsmt_qual, roof_matl, bsmt_fin_sf1, ms_sub_class, bsmt_exposure, kitchen_qual, condition2, overall_cond, year_built, lot_area, sale_condition, total_bsmt_sf, pool_area, garage_cars, exter_qual, bldg_type, functional, bedroom_abv_gr, condition1, exterior1st, mas_vnr_area, land_slope"     "ms_zoning"       "land_contour"    "lot_config"      "low_qual_fin_sf" "garage_qual, garage_cond, street, year_remod_add, mas_vnr_type, kitchen_abv_gr)
+?ols_press()
+ols_coll_diag(forward.mod)
+ols_regress(forward.mod)
+forward$predictors
+### "overall_qual"    "gr_liv_area"     "neighborhood"    "bsmt_qual"       "roof_matl"      
+[6] "bsmt_fin_sf1"    "ms_sub_class"    "bsmt_exposure"   "kitchen_qual"    "condition2"     
+[11] "overall_cond"    "year_built"      "lot_area"        "sale_condition"  "total_bsmt_sf"  
+[16] "pool_area"       "garage_cars"     "exter_qual"      "bldg_type"       "functional"     
+[21] "bedroom_abv_gr"  "condition1"      "exterior1st"     "mas_vnr_area"    "land_slope"     
+[26] "ms_zoning"       "land_contour"    "lot_config"      "low_qual_fin_sf" "garage_qual"    
+[31] "garage_cond"     "street"          "year_remod_add"  "mas_vnr_type"    "kitchen_abv_gr" 
+
+###mass_vnr = 39, 16; remove exterior1st, bsmt_fin_sf1, low_qual_fin_sf, garage_qual, garage_cond
+
+test <- read_csv(file.choose())
+predict(forward.mod, newdata = test, type = 'response')
