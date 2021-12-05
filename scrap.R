@@ -58,7 +58,7 @@ house_fit <- lm(sale_price~.-exterior1st -bsmt_fin_sf1 -low_qual_fin_sf, data = 
 forward <- ols_step_forward_p(house_fit, penter = 0.01, details = TRUE)
 forward
 ols_press(forward.mod)
-f2 <- lm(log(sale_price)~+ overall_qual + log(gr_liv_area) + bsmt_qual + total_bsmt_sf + bsmt_unf_sf + overall_cond + bldg_type + kitchen_qual + year_built + lot_area + sale_condition + garage_cars + pool_area + bedroom_abv_gr + mas_vnr_area + land_slope + condition1 + bsmt_fin_sf2 + lot_config, data = houses2)
+f2 <- lm(log(sale_price)~ overall_qual + log(gr_liv_area) + bsmt_qual + total_bsmt_sf + bsmt_unf_sf + overall_cond + bldg_type + kitchen_qual + year_built + lot_area + sale_condition + garage_cars + pool_area + bedroom_abv_gr + mas_vnr_area + land_slope + condition1 + bsmt_fin_sf2 + lot_config, data = houses2)
 ols_press(f2)
 ols_coll_diag(f2)
 ols_regress(f2)
@@ -107,9 +107,21 @@ id <- test2$id
 pred %>% as.vector()
 id
 forward_submission <- data.frame(Id = test2$id, SalePrice = pred$pred)
+forward_submission$SalePrice <- exp(forward_submission$SalePrice)
 write_csv(forward_submission, "/Users/joaquindominguez/Dropbox/SMU/Statistical Foundations/Final_project/stats-final-=proj/forward_submission.csv")
 library(here)
 here()
 
+ols_regress(f2)
 
-
+backwards <- ols_step_backward_p(house_fit, prem = 0.01, details = TRUE)
+backwards$removed
+back_var_removed <- as.vector(backwards$removed)
+back_var_removed
+backward_model <- lm(log(sale_price)~. -garage_cond -, data = houses3)
+houses3 <- houses2 %>% select(everything(), -c(electrical, yr_sold, ms_sub_class, paved_drive, bsmt_full_bath, open_porch_sf, bsmt_cond, gr_liv_area, heating, bsmt_fin_type2, garage_yr_blt, enclosed_porch, exter_cond, garage_type, sale_type, bsmt_half_bath, lot_shape, misc_val, central_air, heating_qc, fireplace_qu, tot_rms_abv_grd, roof_style, screen_porch, wood_deck_sf, foundation, lot_frontage, half_bath, full_bath, x3ssn_porch, exterior2nd, garage_finish, garage_area, mo_sold, bsmt_fin_type1, house_style, fireplaces, year_remod_add, ms_zoning, kitchen_abv_gr, mas_vnr_type, mas_vnr_area))
+ols_press(backward_model)
+ols_aic(backward_model)
+ols_step_best_subset(backward_model)
+?ols_best_subset
+ols_coll_diag(backward_model)
