@@ -132,10 +132,30 @@ stepwise_model <- lm(log(sale_price)~.-ms_zoning -heating -roof_matl -neighborho
 pred <- predict.lm(stepwise_model, newdata = test2, type = 'response') %>% as.data.frame()
 sum(is.na(pred$.))
 median_pred <- pred %>% filter(!is.na(.))
-median(median_pred$.)
-pred$. <- pred$. %>% replace_na(., 11.97542)
+med <- median(median_pred$.)
+pred$. <- pred$. %>% replace_na(., med)
 stepwise_sub <- data.frame(Id = test$Id, SalePrice = pred$.)
 stepwise_sub$SalePrice <- exp(stepwise_sub$SalePrice)
 
+```
+
+```{r custom model}
+
+### we create our custom model based on the most significant variables from the models above
+custom_fit <- lm(log(sale_price)~ overall_qual + gr_liv_area + total_bsmt_sf + bsmt_fin_sf1 + year_built + garage_cars + year_remod_add + kitchen_qual + lot_area + garage_area + fireplace_qu + x1st_flr_sf + garage_type + overall_cond + bsmt_qual + ms_zoning + x2nd_flr_sf + bsmt_fin_type1 + bsmt_full_bath, data = houses2)
+
+### refine the model using CV PRESS, VIF, and p-values.
+ols_press(custom_fit)
+ols_coll_diag(custom_fit)
+ols_regress(custom_fit)
+
+### create predictions based on final custom model
+pred <- predict.lm(custom_fit, newdata = test2, type = 'response')
+pred <- pred %>% as.data.frame()
+median_pred <- pred %>% filter(!is.na(.))
+med <- median(median_pred$.)
+pred$. <- pred$. %>% replace_na(., med)
+custom_sub <- data.frame(Id = test$Id, SalePrice = pred$.)
+custom_sub$SalePrice <- exp(custom_sub$SalePrice)
 ```
 
