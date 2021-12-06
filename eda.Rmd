@@ -13,36 +13,129 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ```{r}
+### load packages
 library(tidyverse)
 library(olsrr)
-houses <- read_csv(file.choose())
+
+### read in data
+houses <- read_csv("https://raw.githubusercontent.com/j-dominguez9/stats-final-proj/main/train.csv")
 head(houses)
+test <- read_csv("https://raw.githubusercontent.com/j-dominguez9/stats-final-proj/main/test.csv")
+
+
+### replace missing values with "None"
 houses <- houses %>% mutate_at(vars(Alley, BsmtQual, BsmtCond, BsmtExposure, BsmtFinType1, BsmtFinType2, FireplaceQu, GarageType, GarageFinish, GarageQual, GarageCond, PoolQC, Fence, MiscFeature), ~replace_na(.,"None"))
+
+test <- test %>% mutate_at(vars(Alley, BsmtQual, BsmtCond, BsmtExposure, BsmtFinType1, BsmtFinType2, FireplaceQu, GarageType, GarageFinish, GarageQual, GarageCond, PoolQC, Fence, MiscFeature), ~replace_na(.,"None"))
+head(test)
+
+
+### clean variable names
 houses <- houses %>% janitor::clean_names()
+
+test2 <- test %>% janitor::clean_names()
+
+### deselecting variables that don't provide possibility for correlation with sale price
 houses2 <- houses %>% select(everything(), -c(id, pool_qc, fence, misc_feature, alley, utilities))
-house_fit <- lm(sale_price~.-exterior1st -bsmt_fin_sf1 -low_qual_fin_sf, data = houses2)
+
+
+
+```
+
+```{r forward selection}
+### initial model for forward selection
+house_fit <- lm(sale_price~., data = houses2)
 forward <- ols_step_forward_p(house_fit, penter = 0.05, details = TRUE)
+
 forward.mod <- lm(log(sale_price)~ overall_qual+log(gr_liv_area)+ms_sub_class+bsmt_exposure+kitchen_qual+overall_cond+year_built+lot_area+sale_condition+total_bsmt_sf+pool_area+garage_cars+bldg_type+functional+bedroom_abv_gr+condition1+mas_vnr_area+land_slope+land_contour+lot_config+street+year_remod_add+kitchen_abv_gr, data = houses2)
 ols_press(forward.mod)
 ols_coll_diag(forward.mod)
 ols_regress(forward.mod)
+
+### Reducing variables with penter = 0.05 proved too troublesome and messy, so will reduce to penter = 0.01
 forward <- ols_step_forward_p(house_fit, penter = 0.01, details = TRUE)
 f2 <- lm(log(sale_price)~+ overall_qual + log(gr_liv_area) + bsmt_qual + total_bsmt_sf + bsmt_unf_sf + overall_cond + bldg_type + kitchen_qual + year_built + lot_area + sale_condition + garage_cars + pool_area + bedroom_abv_gr + mas_vnr_area + land_slope + condition1 + bsmt_fin_sf2 + lot_config, data = houses2)
 ols_press(f2)
 ols_coll_diag(f2)
 ols_regress(f2)
 
-test <- read_csv(file.choose())
-test <- test %>% mutate_at(vars(Alley, BsmtQual, BsmtCond, BsmtExposure, BsmtFinType1, BsmtFinType2, FireplaceQu, GarageType, GarageFinish, GarageQual, GarageCond, PoolQC, Fence, MiscFeature), ~replace_na(.,"None"))
-head(test)
-test2 <- test %>% janitor::clean_names()
-
+### create predictions based on model above
 pred <- predict.lm(f2, newdata = test2, type = 'response')
 is.numeric(pred)
 pred <- as.data.frame(pred)
-mean_pred <- pred %>% filter(!is.na(pred))
-mean(mean_pred$pred)
-pred <- pred %>% replace_na(., 12.00939)
+median_pred <- pred %>% filter(!is.na(pred))
+med <- median(median_pred$pred)
+pred$pred <- pred$pred %>% replace_na(., med)
+
+
+### create csv for forward model submission
+forward_submission <- data.frame(Id = test2$id, SalePrice = pred$pred)
+forward_submission$SalePrice <- exp(forward_submission$SalePrice)
+
+```
+
+
+
+
+```{r backward selection submission}
+
+### run backward selection at prem = 0.005
+backwards <- ols_step_backward_p(house_fit, prem = 0.005, details = TRUE)
+
+### since the backward selection function outputs the removed variables, we have to create our model by eliminating the removed variables
+backwards$removed
+houses3 <- houses2 %>% select(everything(), -c(bsmt_half_bath, exter_qual, gr_liv_area, bsmt_fin_sf2, garage_yr_blt, mas_vnr_area, fireplace_qu, mo_sold, yr_sold, open_porch_sf, ms_sub_class, exterior2nd, bsmt_cond, lot_shape, garage_type, electrical, garage_finish, mas_vnr_type, paved_drive,bedroom_abv_gr, pool_area, exter_cond, bsmt_exposure, roof_style, house_style, misc_val, land_contour, tot_rms_abv_grd, bsmt_fin_type2, street, garage_cond, garage_qual, kitchen_abv_gr, bsmt_qual, x3ssn_porch, garage_cars, bsmt_fin_type1, enclosed_porch, sale_type, wood_deck_sf, lot_frontage, full_bath, half_bath, heating_qc, lot_config))
+
+### once we have the variable selection dictated by the model, we can refine it by checking its CV PRESS and eliminating those variables with high VIF and p-values
+backward_model <- lm(log(sale_price)~., data = houses3)
+ols_press(backward_model)
+ols_aic(backward_model)
+ols_coll_diag(backward_model)
+ols_regress(backward_model)
+backward_model <- lm(log(sale_price)~.-neighborhood -exterior1st -heating -roof_matl -total_bsmt_sf -ms_zoning -functional -kitchen_qual -bsmt_unf_sf -condition2, data = houses3)
+
+### create predictions based on final backward model
+
+pred <- predict.lm(backward_model, newdata = test2, type = 'response')
+is.numeric(pred)
+pred <- as.data.frame(pred)
+median_pred <- pred %>% filter(!is.na(pred))
+med <- median(median_pred$pred)
+pred$pred <- pred$pred %>% replace_na(., med)
+backward_submission <- data.frame(Id = test2$id, SalePrice = pred$pred)
+head(backward_submission)
+backward_submission$SalePrice <- exp(backward_submission$SalePrice)
+
+```
+
+
+```{r stepwise selection}
+
+### run stepwise selection at pent = 0.01 and prem = 0.005, as above
+step_mod <- ols_step_both_p(house_fit, pent = 0.01, prem = 0.005, details = TRUE )
+step_mod$predictors
+summary(step_mod)
+
+### create new model based on suggested predictors
+houses4 <- houses2 %>% select(c(overall_qual, neighborhood, gr_liv_area, garage_cars, overall_cond, roof_matl, total_bsmt_sf, year_built, ms_zoning, condition2, bsmt_unf_sf, sale_condition, functional, bldg_type, lot_area, central_air, kitchen_qual, fireplaces, condition1, year_remod_add, screen_porch, heating, bsmt_full_bath, bsmt_exposure, land_slope, foundation, garage_area, sale_price))
+
+stepwise_model <- lm(log(sale_price)~., data = houses4)
+
+### we'll use CV PRESS statistic to refine model and remove variables with high VIF and p-values.
+ols_press(stepwise_model)
+ols_coll_diag(stepwise_model)
+ols_regress(stepwise_model)
+stepwise_model <- lm(log(sale_price)~.-ms_zoning -heating -roof_matl -neighborhood -condition2 -kitchen_qual -functional, data = houses4)
+
+
+### create predictions based on final stepwise model
+pred <- predict.lm(stepwise_model, newdata = test2, type = 'response') %>% as.data.frame()
+sum(is.na(pred$.))
+median_pred <- pred %>% filter(!is.na(.))
+median(median_pred$.)
+pred$. <- pred$. %>% replace_na(., 11.97542)
+stepwise_sub <- data.frame(Id = test$Id, SalePrice = pred$.)
+stepwise_sub$SalePrice <- exp(stepwise_sub$SalePrice)
 
 ```
 

@@ -170,3 +170,45 @@ backward_submission <- data.frame(Id = test2$id, SalePrice = pred$pred)
 head(backward_submission)
 backward_submission$SalePrice <- exp(backward_submission$SalePrice)
 write_csv(backward_submission, "/Users/joaquindominguez/Dropbox/SMU/Statistical Foundations/Final_project/stats-final-=proj/back_sub.csv")
+
+
+
+####step-wise
+
+step_mod <- ols_step_both_p(house_fit, pent = 0.05, prem = 0.005, details = TRUE )
+step_mod$predictors
+summary(step_mod)
+houses4 <- houses2 %>% select(c(overall_qual, neighborhood, gr_liv_area, garage_cars, overall_cond, roof_matl, total_bsmt_sf, 
+                                               year_built, ms_zoning, condition2, bsmt_unf_sf, sale_condition, functional, bldg_type, 
+                                               lot_area, central_air, kitchen_qual, fireplaces, condition1, year_remod_add, screen_porch, heating, 
+                                               bsmt_full_bath, bsmt_exposure, land_slope, foundation, garage_area, sale_price))
+stepwise_model <- lm(log(sale_price)~.-ms_zoning -heating -roof_matl -neighborhood -condition2 -kitchen_qual -functional, data = houses4)
+ols_press(stepwise_model)
+ols_coll_diag(stepwise_model)
+ols_regress(stepwise_model)
+
+pred <- predict.lm(stepwise_model, newdata = test2, type = 'response') %>% as.data.frame()
+sum(is.na(pred$.))
+median_pred <- pred %>% filter(!is.na(.))
+median(median_pred$.)
+pred$. <- pred$. %>% replace_na(., 11.97542)
+stepwise_sub <- data.frame(Id = test$Id, SalePrice = pred$.)
+stepwise_sub$SalePrice <- exp(stepwise_sub$SalePrice)
+
+write_csv(stepwise_sub, "/Users/joaquindominguez/Dropbox/SMU/Statistical Foundations/Final_project/stats-final-=proj/step_sub.csv")
+
+
+### custom
+colnames(houses2)
+custom_fit <- lm(log(sale_price)~ overall_qual + gr_liv_area + total_bsmt_sf + bsmt_fin_sf1 + year_built + garage_cars + year_remod_add + kitchen_qual + lot_area + garage_area + fireplace_qu + x1st_flr_sf + garage_type + overall_cond + bsmt_qual + ms_zoning + x2nd_flr_sf + bsmt_fin_type1 + bsmt_full_bath, data = houses2)
+ols_press(custom_fit)
+ols_regress(custom_fit)
+pred <- predict.lm(custom_fit, newdata = test2, type = 'response')
+pred <- pred %>% as.data.frame()
+median_pred <- pred %>% filter(!is.na(.))
+median(median_pred$.)
+pred$. <- pred$. %>% replace_na(., 11.98766)
+custom_sub <- data.frame(Id = test$Id, SalePrice = pred$.)
+custom_sub$SalePrice <- exp(custom_sub$SalePrice)
+write_csv(custom_sub, "/Users/joaquindominguez/Dropbox/SMU/Statistical Foundations/Final_project/stats-final-=proj/custom_sub.csv")
+here()
