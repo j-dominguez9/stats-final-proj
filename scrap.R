@@ -54,7 +54,7 @@ attributes(houses)
 str(houses)
 summary(houses)
 houses2 <- houses %>% select(everything(), -c(id, pool_qc, fence, misc_feature, alley, utilities))
-house_fit <- lm(sale_price~.-exterior1st -bsmt_fin_sf1 -low_qual_fin_sf, data = houses2)
+house_fit <- lm(log(sale_price)~.-exterior1st -bsmt_fin_sf1 -low_qual_fin_sf, data = houses2)
 forward <- ols_step_forward_p(house_fit, penter = 0.01, details = TRUE)
 forward
 ols_press(forward.mod)
@@ -114,14 +114,59 @@ here()
 
 ols_regress(f2)
 
-backwards <- ols_step_backward_p(house_fit, prem = 0.01, details = TRUE)
+backwards <- ols_step_backward_p(house_fit, prem = 0.005, details = TRUE)
 backwards$removed
 back_var_removed <- as.vector(backwards$removed)
 back_var_removed
-backward_model <- lm(log(sale_price)~. -garage_cond -, data = houses3)
+backward_model <- lm(log(sale_price)~.-neighborhood -exterior1st -heating -roof_matl -total_bsmt_sf -ms_zoning -functional -kitchen_qual -bsmt_unf_sf -condition2, data = houses3)
 houses3 <- houses2 %>% select(everything(), -c(electrical, yr_sold, ms_sub_class, paved_drive, bsmt_full_bath, open_porch_sf, bsmt_cond, gr_liv_area, heating, bsmt_fin_type2, garage_yr_blt, enclosed_porch, exter_cond, garage_type, sale_type, bsmt_half_bath, lot_shape, misc_val, central_air, heating_qc, fireplace_qu, tot_rms_abv_grd, roof_style, screen_porch, wood_deck_sf, foundation, lot_frontage, half_bath, full_bath, x3ssn_porch, exterior2nd, garage_finish, garage_area, mo_sold, bsmt_fin_type1, house_style, fireplaces, year_remod_add, ms_zoning, kitchen_abv_gr, mas_vnr_type, mas_vnr_area))
+houses3 <- houses2 %>% select(everything(), -c(bsmt_half_bath, exter_qual, gr_liv_area, bsmt_fin_sf2, garage_yr_blt, mas_vnr_area, fireplace_qu, mo_sold, yr_sold, open_porch_sf, ms_sub_class, exterior2nd, bsmt_cond, lot_shape, garage_type, electrical, garage_finish, mas_vnr_type, paved_drive, 
+                                               bedroom_abv_gr, pool_area, exter_cond, bsmt_exposure, roof_style, house_style, misc_val, land_contour, tot_rms_abv_grd, bsmt_fin_type2, street, 
+                                               garage_cond, garage_qual, kitchen_abv_gr, bsmt_qual, x3ssn_porch, garage_cars, bsmt_fin_type1, enclosed_porch, sale_type, wood_deck_sf, lot_frontage, full_bath, 
+                                               half_bath, heating_qc, lot_config))
+lm(log(sale_price)~back_var_removed, data = houses2)
+c(bsmt_half_bath, exter_qual, gr_liv_area, bsmt_fin_sf2, garage_yr_blt, mas_vnr_area, fireplace_qu, mo_sold, yr_sold, open_porch_sf, ms_sub_class, exterior2nd, bsmt_cond, lot_shape, garage_type, electrical, garage_finish, mas_vnr_type, paved_drive, 
+bedroom_abv_gr, pool_area, exter_cond, bsmt_exposure, roof_style, house_style, misc_val, land_contour, tot_rms_abv_grd, bsmt_fin_type2, street, 
+garage_cond, garage_qual, kitchen_abv_gr, bsmt_qual, x3ssn_porch, garage_cars, bsmt_fin_type1, enclosed_porch, sale_type, wood_deck_sf, lot_frontage, full_bath, 
+half_bath, heating_qc, lot_config)  
 ols_press(backward_model)
 ols_aic(backward_model)
 ols_step_best_subset(backward_model)
 ?ols_best_subset
 ols_coll_diag(backward_model)
+ols_regress(backward_model)
+
+test <- read_csv(file.choose())
+test2 <- test %>% janitor::clean_names()
+colnames(test2)
+test <- test %>% mutate_at(vars(Alley, BsmtQual, BsmtCond, BsmtExposure, BsmtFinType1, BsmtFinType2, FireplaceQu, GarageType, GarageFinish, GarageQual, GarageCond, PoolQC, Fence, MiscFeature), ~replace_na(.,"None"))
+head(test)
+
+pred <- predict.lm(backward_model, newdata = test2, type = 'response')
+mean(pred)
+is.numeric(pred)
+median_pred <- pred %>% filter(!is.na(pred))
+median(median_pred$pred)
+pred <- as.data.frame(pred)
+median(pred$pred)
+pred <- pred$pred %>% replace_na(., 11.97423)
+pred %>% filter(is.na(pred))
+install.packages("mltools")
+library(mltools)
+mltools::rmsle(preds = pred, actuals = test2$s)
+range(pred)
+head(pred)
+head(test2)
+id <- test2$id
+pred %>% as.vector()
+id
+forward_submission <- data.frame(Id = test2$id, SalePrice = pred$pred)
+forward_submission$SalePrice <- exp(forward_submission$SalePrice)
+write_csv(forward_submission, "/Users/joaquindominguez/Dropbox/SMU/Statistical Foundations/Final_project/stats-final-=proj/forward_submission.csv")
+library(here)
+here()
+
+backward_submission <- data.frame(Id = test2$id, SalePrice = pred$pred)
+head(backward_submission)
+backward_submission$SalePrice <- exp(backward_submission$SalePrice)
+write_csv(backward_submission, "/Users/joaquindominguez/Dropbox/SMU/Statistical Foundations/Final_project/stats-final-=proj/back_sub.csv")
