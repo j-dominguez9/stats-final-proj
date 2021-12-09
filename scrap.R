@@ -212,3 +212,6 @@ custom_sub <- data.frame(Id = test$Id, SalePrice = pred$.)
 custom_sub$SalePrice <- exp(custom_sub$SalePrice)
 write_csv(custom_sub, "/Users/joaquindominguez/Dropbox/SMU/Statistical Foundations/Final_project/stats-final-=proj/custom_sub.csv")
 here()
+
+ols_plot_diagnostics(f2)
+ols_plot_resid_stud_fit(f2)

@@ -162,4 +162,7 @@ forward_sub %>% mutate(SalePrice = exp(SalePrice))
 exp(forward_sub$SalePrice)
 head(forward_sub)
 write_csv(forward_sub, "/Users/joaquindominguez/Dropbox/SMU/Statistical Foundations/Final_project/stats-final-=proj/forward_sub.csv")
+install.packages("dtplyr")
+library(dtplyr)
+dtplyr::
 
